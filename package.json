@@ -8,24 +8,26 @@
         "url": "git://github.com/tranhungt/okcupidjs.git"
     },
     "keywords": [
-    "ok",
-    "ok cupid",
-    "okcupid",
-    "api",
-    "wrapper",
-    "bot"
+        "ok",
+        "ok cupid",
+        "okcupid",
+        "api",
+        "wrapper",
+        "bot"
     ],
     "bugs": {
         "url": "https://github.com/tranhungt/okcupidjs/issues",
         "email": "tranhungt1@gmail.com"
     },
     "license": "MIT",
-
     "main": "index.js",
     "engines": {
         "node": "*"
     },
     "dependencies": {
-        "request": "~2.40.0"
+        "async": "^2.5.0",
+        "mongoose": "^4.12.5",
+        "request": "~2.40.0",
+        "rxjs": "^5.5.2"
     }
 }
