@@ -79,10 +79,14 @@ const locations = {
 
 module.exports = {
   bodyTypes: [
-    'skinny',
+    'thin',
     'fit',
     'average',
     'jacked',
+    'curvy',
+    'full_figured',
+    'a_little_extra',
+    'overweight',
   ],
   locations,
   locationNames: _.keys(locations),

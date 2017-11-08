@@ -6,6 +6,8 @@ const QuestionSchema = new Schema({
   author: Number,
   staff: Number,
   submits: Number,
+  updatedBy: Number,
+  seen: Number,
   genre: Number,
   lang_code: String,
   language: Number,
@@ -16,6 +18,7 @@ const QuestionSchema = new Schema({
   qid: { type: Number, required: true, unique: true },
   qtext: String,
   raciness: Number,
+  data: Schema.Types.Mixed,
 });
 
 module.exports = mongoose.model('Question', QuestionSchema);

@@ -14,8 +14,10 @@ mongoose.connection.once('open', () => {
 
 const User = require('./UserSchema');
 const Question = require('./QuestionSchema');
+const Setting = require('./SettingSchema');
 
 module.exports = {
   User,
   Question,
+  Setting,
 };
