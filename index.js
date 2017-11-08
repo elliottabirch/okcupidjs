@@ -15,7 +15,6 @@ const baseQuery = {
   minimum_age: 18,
   maximum_age: 30,
   radius: 100,
-  location: '94104',
   bodytype: ['fit'],
   maximum_attractiveness: 10000,
   minimum_attractiveness: 6000,
@@ -34,3 +33,11 @@ loginStream.subscribe((body) => {
   console.log(err);
 });
 
+// const questionRelations = {
+//   q1: {
+//     q2,
+//     q3,
+//     q4,
+//   },
+// }r
+// ;

@@ -78,7 +78,12 @@ const locations = {
 };
 
 module.exports = {
-  bodyTypes: ['skinny', 'fit', 'average', 'jacked'],
+  bodyTypes: [
+    'skinny',
+    'fit',
+    'average',
+    'jacked',
+  ],
   locations,
   locationNames: _.keys(locations),
   URLS: {
