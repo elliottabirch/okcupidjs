@@ -1,66 +1,110 @@
-const hl = require('highland');
 const { User, Question, Setting } = require('../index');
-const AsyncCache = require('async-cache');
 const async = require('async');
 const _ = require('lodash');
+const log4js = require('log4js');
+
+log4js.configure({
+  appenders: { questionMap: { type: 'file', filename: 'question-map.log' } },
+  categories: { default: { appenders: ['questionMap'], level: 'debug' } },
+});
+
+const log = log4js.getLogger('questionMap');
 
 // const questionCache = new AsyncCache({
 //   maxAge: 600000,
 //   load: (_id, cb) => Question.findOne(
 //     { _id }).exec(cb),
 // });
-
+log.info('-------STARTING--------');
 Setting.findOneAndUpdate({ name: 'report' }, { $inc: { value: 1 } }, { upsert: true, new: true }, (err, setting) => {
-  const processUsers = (user, cb) => {
-    // if (user.questions.length > 50 && user.questions.length < 1000) {
-    console.log(`starting user: ${user._id} with ${user.questions.length} questions`);
-    async.eachSeries(user.questions, (userOriginalQuestion, eCb) => {
-      // console.log(`getting question: ${userOriginalQuestion.questionId}`);
-      Question.findOne({ _id: userOriginalQuestion.questionId }).exec((err, originalQuestion) => {
-        if (err) { return eCb(err); }
-        originalQuestion.data = originalQuestion.data || {};
-        // const questionBank = originalQuestion.updatedBy === setting.value ? originalQuestion.data : {};
-        originalQuestion.seen = originalQuestion.updatedBy === setting.value ? originalQuestion.seen : 0;
-        originalQuestion.updatedBy = setting.value;
-        originalQuestion.seen++;
-        // if (originalQuestion.submits > 1000000) {
-        //   return async.eachLimit(user.questions, 100, (userComparedQuestion, ieCb) => {
+  if (err) { return log.error(err); }
+  return Question.aggregate([
+    {
+      $match: { seen: { $gt: 500 } },
+    },
+    {
+      $project: { answersArray: ['$qans1', '$qans2', '$qans3', '$qans4'] },
+    },
+    {
+      $unwind: {
+        path: '$answersArray',
+        includeArrayIndex: 'index',
+      },
+    },
+    {
+      $match: { answersArray: { $ne: '' } },
+    },
+    {
+      $project: { index: 1 },
+    },
+  ]).exec((err, questions) => {
+    if (err) { return log.error(err); }
+    const questionsById = _.keyBy(questions, '_id');
+    return async.eachLimit(questions, 1, (question, eCb) => {
+      User.aggregate([
+        {
+          $match: {
+            questions: {
+              $elemMatch: {
+                questionId: question._id,
+                'target.answer': question.index + 1,
+              },
+            },
+          },
+        },
+        {
+          $unwind: '$questions',
+        },
+        {
+          $project:
+          {
+            questionId: '$questions.questionId',
+            answer: '$questions.target.answer',
+          },
+        },
+        {
+          $match: {
+            questionId: { $ne: question._id },
+          },
+        },
+        {
+          $group:
+          {
+            _id:
+              {
+                questionId: '$questionId',
+                answer: '$answer',
+              },
+            count: { $sum: 1 },
 
-        // Question.findOne(
-        //   { _id: userComparedQuestion.questionId }).exec((err, comparedQuestion) => {
-        //   if (err) { return ieCb(err); }
-        //   if (comparedQuestion.submits > 1000000 && userComparedQuestion.questionId !== userOriginalQuestion.questionId) {
-        //     questionBank[userOriginalQuestion.target.answer] = questionBank[userOriginalQuestion.target.answer] || {};
-        //     questionBank[userOriginalQuestion.target.answer][comparedQuestion.qid] = questionBank[userOriginalQuestion.target.answer][comparedQuestion.qid] || {};
-        //     questionBank[userOriginalQuestion.target.answer][comparedQuestion.qid][userComparedQuestion.target.answer] = questionBank[userOriginalQuestion.target.answer][comparedQuestion.qid][userComparedQuestion.target.answer] || 0;
-        //     questionBank[userOriginalQuestion.target.answer][comparedQuestion.qid][userComparedQuestion.target.answer] += 1;
-        //   }
-        //   return ieCb();
-        // });
-        // }, (err) => {
-        //   if (err) { return eCb(err); }
-        // originalQuestion.data = questionBank;
-        // originalQuestion.markModified('data');
-        return originalQuestion.save((err, savedQuestiopns) => {
-          if (err) { return eCb(err); }
-          return eCb();
+          },
+        },
+      ]).exec((err, groups) => {
+        if (err) { return eCb(err); }
+        const data = {};
+        groups.forEach(({ _id: { questionId, answer }, count }) => {
+          if (questionsById[questionId]) {
+            data[questionId] = data[questionId] || {};
+            data[questionId][answer] = count;
+          }
         });
-        // });
-        // }
-        // return eCb();
+        return Question.findOne({ _id: question._id }).exec((err, dbQuestion) => {
+          if (err) { return eCb(err); }
+          dbQuestion.data = dbQuestion.updatedBy === setting.value ? dbQuestion.data : {};
+          dbQuestion.updatedBy = setting.value;
+          dbQuestion.data[question.index + 1] = data;
+          dbQuestion.markModified('data');
+          return dbQuestion.save((err, res) => {
+            if (err) { eCb(err); } else {
+              log.info(`Updated question: ${res.qid}, index ${question.index + 1}`);
+              eCb();
+            }
+          });
+        });
       });
     }, (err) => {
-      if (err) { return cb(err); }
-      console.log(`finished user with id: ${user.id}`);
-      return cb(null);
+      if (err) { return log.error(err); }
+      return log.info('done');
     });
-    // } else { cb(); }
-  };
-
-
-  const stream = User.find().stream();
-  hl(stream).map(hl.wrapCallback(processUsers)).parallel(1).done((err) => {
-    if (err) { console.log(err); }
-    console.log('done');
   });
 });

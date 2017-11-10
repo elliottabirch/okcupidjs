@@ -1,6 +1,7 @@
 // require('./db/migrations/move-questions-to-question-table');
-require('./db/migrations/generate-question-maps');
+// require('./db/migrations/generate-question-maps');
 
+require('./algorithms/genetic/index');
 // const OKCupid = require('./lib/client.js');
 // const rx = require('rxjs');
 
